@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Three Kingdoms Kill Relationship Explorer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css">
+  <style>
+    #network {
+      width: 100%;
+      height: 600px;
+      border: 1px solid #e5e7eb;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 font-sans">
+  <div class="container mx-auto p-4">
+    <h1 class="text-3xl font-bold text-center mb-4">Three Kingdoms Kill Relationship Explorer</h1>
+    <p class="text-center mb-4">Click a character to see their relationships. Drag to reposition. Click Reset to restore.</p>
+    <div class="flex justify-center mb-4">
+      <button id="resetButton" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Reset Layout</button>
+    </div>
+    <div id="network"></div>
+    <div id="info" class="mt-4 p-4 bg-white rounded shadow"></div>
+  </div>
+
+  <script>
+    // Character and relationship data (simplified, inspired by Three Kingdoms Kill)
+    const characters = [
+      { id: 1, label: "Liu Bei", group: "Shu", title: "Leader of Shu, benevolent ruler" },
+      { id: 2, label: "Guan Yu", group: "Shu", title: "Sworn brother of Liu Bei, loyal warrior" },
+      { id: 3, label: "Zhang Fei", group: "Shu", title: "Sworn brother of Liu Bei, fierce fighter" },
+      { id: 4, label: "Cao Cao", group: "Wei", title: "Leader of Wei, cunning strategist" },
+      { id: 5, label: "Sun Quan", group: "Wu", title: "Leader of Wu, diplomatic ruler" }
+    ];
+
+    const relationships = [
+      { from: 1, to: 2, label: "Sworn Brother", color: "green" },
+      { from: 1, to: 3, label: "Sworn Brother", color: "green" },
+      { from: 2, to: 3, label: "Sworn Brother", color: "green" },
+      { from: 1, to: 4, label: "Rival", color: "red" },
+      { from: 1, to: 5, label: "Neutral", color: "gray" },
+      { from: 4, to: 5, label: "Ally", color: "blue" }
+    ];
+
+    // Initial positions for reset functionality
+    const initialPositions = {
+      1: { x: -200, y: 0 },
+      2: { x: -100, y: -100 },
+      3: { x: -100, y: 100 },
+      4: { x: 100, y: -100 },
+      5: { x: 100, y: 100 }
+    };
+
+    // Create vis.js network
+    const nodes = new vis.DataSet(characters);
+    const edges = new vis.DataSet(relationships);
+    const container = document.getElementById("network");
+    const data = { nodes: nodes, edges: edges };
+    const options = {
+      nodes: {
+        shape: "box",
+        font: { size: 16 },
+        color: {
+          background: "#f3f4f6",
+          border: "#4b5563",
+          highlight: { background: "#e5e7eb", border: "#1f2937" }
+        }
+      },
+      edges: { font: { size: 12 }, arrows: "to" },
+      physics: { enabled: false }, // Allow manual dragging
+      interaction: { dragNodes: true, selectable: true }
+    };
+    const network = new vis.Network(container, data, options);
+
+    // Store initial layout
+    network.storePositions();
+
+    // Click event to show relationships
+    network.on("click", function(params) {
+      const infoDiv = document.getElementById("info");
+      if (params.nodes.length > 0) {
+        const nodeId = params.nodes[0];
+        const node = characters.find(c => c.id === nodeId);
+        const connectedEdges = relationships.filter(e => e.from === nodeId || e.to === nodeId);
+        let info = `<h2 class="text-xl font-bold">${node.label}</h2><p>${node.title}</p><h3 class="text-lg font-semibold mt-2">Relationships:</h3><ul>`;
+        connectedEdges.forEach(edge => {
+          const otherNodeId = edge.from === nodeId ? edge.to : edge.from;
+          const otherNode = characters.find(c => c.id === otherNodeId);
+          info += `<li><span class="text-${edge.color}-600">${edge.label}</span> with ${otherNode.label}</li>`;
+        });
+        info += "</ul>";
+        infoDiv.innerHTML = info;
+
+        // Highlight connected nodes and edges
+        network.selectNodes([nodeId]);
+        const connectedNodeIds = connectedEdges.map(e => e.from === nodeId ? e.to : e.from);
+        network.selectNodes([nodeId, ...connectedNodeIds]);
+      } else {
+        infoDiv.innerHTML = "<p>Click a character to see their relationships.</p>";
+        network.unselectAll();
+      }
+    });
+
+    // Reset button functionality
+    document.getElementById("resetButton").addEventListener("click", function() {
+      nodes.update(characters.map(c => ({ id: c.id, x: initialPositions[c.id].x, y: initialPositions[c.id].y })));
+      network.fit();
+      document.getElementById("info").innerHTML = "<p>Click a character to see their relationships.</p>";
+      network.unselectAll();
+    });
+  </script>
+</body>
+</html>
